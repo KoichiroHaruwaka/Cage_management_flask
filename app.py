@@ -7,7 +7,7 @@ from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
-app.secret_key = 'wulab'  # フォームのセキュリティに必要
+app.secret_key = 'SECRET_KEY'  # フォームのセキュリティに必要
 
 # Google Sheets API のスコープと認証情報
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
