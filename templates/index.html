@@ -52,8 +52,10 @@
         {% for row in range(9) %}
             {% for col in range(7) %}
                 {% set cage = None %}
-                {% for item in cages if item.row == row and item.col == col %}
-                    {% set cage = item %}
+                {% for item in cages %}
+                    {% if item['row'] == row and item['col'] == col %}
+                        {% set cage = item %}
+                    {% endif %}
                 {% endfor %}
                 {% if cage %}
                     <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
