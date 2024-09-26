@@ -1,191 +1,133 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
-import csv
-from datetime import datetime, timedelta
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 import os
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # フォームのセキュリティに必要
 
-# ケージ情報を保持する辞書
-# キーは (rack, row, col) のタプル
-cages = {}
+# PostgreSQL データベース URI の設定（Render の PostgreSQL 接続情報に置き換える）
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://<username>:<password>@<host>:<port>/<dbname>'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 変更追跡機能を無効にする（推奨）
 
-# マウスの系統リストとユーザーリストを読み込む関数
-def load_strains_and_users(filename="mouse_strains.csv"):
-    strain_list = []
-    user_list = []
-    try:
-        with open(filename, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                strain = row.get("Strain", "")
-                if strain and strain not in strain_list:
-                    strain_list.append(strain)
-                user = row.get("User", "")
-                if user and user not in user_list:
-                    user_list.append(user)
-    except FileNotFoundError:
-        pass
-    return strain_list, user_list
+# SQLAlchemy の初期化
+db = SQLAlchemy(app)
 
-# 系統リストとユーザーリストの読み込み
-strain_list, user_list = load_strains_and_users()
+# ケージ情報を保持するテーブル定義
+class Cage(db.Model):
+    __tablename__ = 'cages'
+    id = db.Column(db.Integer, primary_key=True)
+    rack = db.Column(db.String(1), nullable=False)
+    row = db.Column(db.Integer, nullable=False)
+    col = db.Column(db.Integer, nullable=False)
+    cage_id = db.Column(db.String(50), nullable=False)
+    strain = db.Column(db.String(50), nullable=False)
+    count = db.Column(db.Integer, nullable=False)
+    gender = db.Column(db.String(10), nullable=False)
+    usage = db.Column(db.String(20), nullable=False)
+    user = db.Column(db.String(50), nullable=False)
+    dob = db.Column(db.String(20), nullable=True)
+    note = db.Column(db.Text, nullable=True)
 
-# ラック名のリスト
-rack_names = ['A', 'B', 'C', 'D']
+# データベースのテーブル作成
+with app.app_context():
+    db.create_all()
 
-# データをCSVに保存する関数
-def save_to_csv(filename="cage_data.csv"):
-    with open(filename, mode='w', newline='') as file:
-        fieldnames = ["rack", "row", "col", "cage_id", "strain", "count", "gender", "usage", "user", "dob", "note"]
-        writer = csv.DictWriter(file, fieldnames=fieldnames)
-        writer.writeheader()
-        for (rack, row, col), cage_info in cages.items():
-            writer.writerow({
-                "rack": rack,
-                "row": row,
-                "col": col,
-                "cage_id": cage_info["cage_id"],
-                "strain": cage_info["strain"],
-                "count": cage_info["count"],
-                "gender": cage_info["gender"],
-                "usage": cage_info["usage"],
-                "user": cage_info["user"],
-                "dob": cage_info.get("dob", ""),
-                "note": cage_info.get("note", "")
-            })
-
-# データをCSVからロードする関数
-def load_from_csv(filename="cage_data.csv"):
-    if not os.path.exists(filename):
-        return
-    with open(filename, mode='r') as file:
-        reader = csv.DictReader(file)
-        for row in reader:
-            rack = row["rack"]
-            row_idx = int(row["row"])
-            col_idx = int(row["col"])
-            cages[(rack, row_idx, col_idx)] = {
-                "cage_id": row["cage_id"],
-                "strain": row["strain"],
-                "count": row.get("count", "0") or "0",  # 修正
-                "gender": row["gender"],
-                "usage": row["usage"],
-                "user": row.get("user", ""),
-                "dob": row.get("dob", ""),
-                "note": row.get("note", "")
-            }
-
-# アプリケーション起動時にデータをロード
-load_from_csv()
-
+# データ表示用のルート
 @app.route('/')
 def index():
     # 現在のラックを取得（デフォルトはラックA）
     current_rack = request.args.get('rack', 'A')
     # 選択されたユーザーのフィルター
     selected_user = request.args.get('user', None)
+
     # ケージ情報をフィルタリング
-    rack_cages = {}
-    for (rack, row, col), cage_info in cages.items():
-        if rack == current_rack:
-            if not selected_user or cage_info['user'] == selected_user:
-                rack_cages[(row, col)] = cage_info
+    if selected_user:
+        cages = Cage.query.filter_by(rack=current_rack, user=selected_user).all()
+    else:
+        cages = Cage.query.filter_by(rack=current_rack).all()
+
     # ラック内のケージ数とマウス数を計算
-    filled_cages = len(rack_cages)
-    total_mice = sum(int(info["count"] or 0) for info in rack_cages.values())  # 修正
+    filled_cages = len(cages)
+    total_mice = sum(cage.count for cage in cages)
+
     # 全体のケージ数とマウス数を計算
-    total_filled_cages = len(cages)
-    total_mice_all = sum(int(info["count"] or 0) for info in cages.values())  # 修正
+    total_filled_cages = Cage.query.count()
+    total_mice_all = db.session.query(db.func.sum(Cage.count)).scalar()
+
     return render_template('index.html',
-                           rack_names=rack_names,
+                           rack_names=['A', 'B', 'C', 'D'],
                            current_rack=current_rack,
-                           cages=rack_cages,
+                           cages=cages,
                            filled_cages=filled_cages,
                            total_mice=total_mice,
                            total_filled_cages=total_filled_cages,
                            total_mice_all=total_mice_all,
-                           user_list=user_list,
+                           user_list=Cage.query.distinct(Cage.user).all(),
                            selected_user=selected_user)
 
+# ケージの詳細表示と編集用のルート
 @app.route('/cage/<rack>/<int:row>/<int:col>', methods=['GET', 'POST'])
 def cage_detail(rack, row, col):
-    key = (rack, row, col)
-    cage_info = cages.get(key, {
-        "cage_id": "",
-        "strain": strain_list[0] if strain_list else "",
-        "count": "",
-        "gender": "Male",
-        "usage": "Maintain",
-        "user": user_list[0] if user_list else "",
-        "dob": "",
-        "note": ""
-    })
+    cage = Cage.query.filter_by(rack=rack, row=row, col=col).first()
+    if not cage:
+        cage = Cage(rack=rack, row=row, col=col)
+
     if request.method == 'POST':
-        cage_id = request.form['cage_id']
-        user = request.form['user']
-        strain = request.form['strain']
-        count = request.form['count']
-        gender = request.form['gender']
-        usage = request.form['usage']
-        dob = request.form.get('dob', '')
-        note = request.form.get('note', '')
-        # フォームのバリデーション
-        if not cage_id or not user or not strain or not count or not gender or not usage:
+        cage.cage_id = request.form['cage_id']
+        cage.user = request.form['user']
+        cage.strain = request.form['strain']
+        cage.count = request.form['count']
+        cage.gender = request.form['gender']
+        cage.usage = request.form['usage']
+        cage.dob = request.form.get('dob', '')
+        cage.note = request.form.get('note', '')
+
+        if not cage.cage_id or not cage.user or not cage.strain or not cage.count or not cage.gender or not cage.usage:
             flash("Please fill in all required fields.")
             return redirect(request.url)
-        if not count.isdigit():
+        if not cage.count.isdigit():
             flash("Number of Mice must be a positive integer.")
             return redirect(request.url)
-        if usage == "New born":
-            if not dob:
-                flash("Please provide DOB for New born mice.")
-                return redirect(request.url)
-            try:
-                datetime.strptime(dob, "%m-%d-%Y")
-            except ValueError:
-                flash("DOB must be in MM-DD-YYYY format.")
-                return redirect(request.url)
-        else:
-            dob = ""
-        cages[key] = {
-            "cage_id": cage_id,
-            "user": user,
-            "strain": strain,
-            "count": count,
-            "gender": gender,
-            "usage": usage,
-            "dob": dob,
-            "note": note
-        }
-        save_to_csv()
+        if cage.usage == "New born" and not cage.dob:
+            flash("Please provide DOB for New born mice.")
+            return redirect(request.url)
+
+        db.session.add(cage)
+        db.session.commit()
+
         return redirect(url_for('index', rack=rack))
+
     return render_template('cage_detail.html',
                            rack=rack,
                            row=row,
                            col=col,
-                           cage_info=cage_info,
-                           strain_list=strain_list,
-                           user_list=user_list)
+                           cage_info=cage,
+                           strain_list=['Strain1', 'Strain2', 'Strain3'],  # 実際の系統リストを指定
+                           user_list=['User1', 'User2', 'User3'])  # 実際のユーザーリストを指定
 
+# ケージを空にするためのルート
 @app.route('/empty_cage/<rack>/<int:row>/<int:col>', methods=['POST'])
 def empty_cage(rack, row, col):
-    key = (rack, row, col)
-    if key in cages:
-        del cages[key]
-        save_to_csv()
+    cage = Cage.query.filter_by(rack=rack, row=row, col=col).first()
+    if cage:
+        db.session.delete(cage)
+        db.session.commit()
     return redirect(url_for('index', rack=rack))
 
+# ユーザーサマリーの表示
 @app.route('/summary', methods=['GET'])
 def summary():
     user = request.args.get('user', '')
     if not user:
         flash("Please select a user.")
         return redirect(url_for('index'))
-    user_cages = [info for info in cages.values() if info["user"] == user]
+
+    user_cages = Cage.query.filter_by(user=user).all()
     total_cages = len(user_cages)
-    total_mice = sum(int(info["count"] or 0) for info in user_cages)  # 修正
-    strains = set(info["strain"] for info in user_cages)
+    total_mice = sum(cage.count for cage in user_cages)
+    strains = {cage.strain for cage in user_cages}
+
     return render_template('summary.html',
                            user=user,
                            total_cages=total_cages,
@@ -194,3 +136,4 @@ def summary():
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
+    
