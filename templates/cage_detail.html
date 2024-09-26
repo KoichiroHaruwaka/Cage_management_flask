@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Cage Detail</title>
+</head>
+<body>
+    <h1>Cage Detail - Rack {{ rack }}, Row {{ row }}, Column {{ col }}</h1>
+    <form method="post">
+        <label for="cage_id">Cage ID:</label>
+        <input type="text" id="cage_id" name="cage_id" value="{{ cage_info['cage_id'] }}"><br>
+
+        <label for="user">User:</label>
+        <select id="user" name="user">
+            {% for user in user_list %}
+                <option value="{{ user }}" {% if cage_info['user'] == user %}selected{% endif %}>{{ user }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label for="strain">Mouse Strain:</label>
+        <select id="strain" name="strain">
+            {% for strain in strain_list %}
+                <option value="{{ strain }}" {% if cage_info['strain'] == strain %}selected{% endif %}>{{ strain }}</option>
+            {% endfor %}
+        </select><br>
+
+        <label for="count">Number of Mice:</label>
+        <input type="text" id="count" name="count" value="{{ cage_info['count'] }}"><br>
+
+        <label for="gender">Gender:</label>
+        <select id="gender" name="gender">
+            <option value="Male" {% if cage_info['gender'] == 'Male' %}selected{% endif %}>Male</option>
+            <option value="Female" {% if cage_info['gender'] == 'Female' %}selected{% endif %}>Female</option>
+        </select><br>
+
+        <label for="usage">Usage:</label>
+        <select id="usage" name="usage" onchange="toggleDOB()">
+            <option value="Maintain" {% if cage_info['usage'] == 'Maintain' %}selected{% endif %}>Maintain</option>
+            <option value="Breeding" {% if cage_info['usage'] == 'Breeding' %}selected{% endif %}>Breeding</option>
+            <option value="Experiment" {% if cage_info['usage'] == 'Experiment' %}selected{% endif %}>Experiment</option>
+            <option value="New born" {% if cage_info['usage'] == 'New born' %}selected{% endif %}>New born</option>
+        </select><br>
+
+        <div id="dob_field" style="display: none;">
+            <label for="dob">DOB (MM-DD-YYYY):</label>
+            <input type="text" id="dob" name="dob" value="{{ cage_info.get('dob', '') }}"><br>
+        </div>
+
+        <label for="note">Note:</label><br>
+        <textarea id="note" name="note" rows="5" cols="40">{{ cage_info.get('note', '') }}</textarea><br>
+
+        <button type="submit">Save</button>
+    </form>
+    <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}">
+        <button type="submit">Empty Cage</button>
+    </form>
+    <a href="{{ url_for('index', rack=rack) }}">Back to Rack {{ rack }}</a>
+
+    <script>
+        function toggleDOB() {
+            var usage = document.getElementById('usage').value;
+            var dobField = document.getElementById('dob_field');
+            if (usage === 'New born') {
+                dobField.style.display = 'block';
+            } else {
+                dobField.style.display = 'none';
+            }
+        }
+        // 初期表示
+        toggleDOB();
+    </script>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>

@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>User Summary</title>
+</head>
+<body>
+    <h1>Summary for User: {{ user }}</h1>
+    <p>Total Cages: {{ total_cages }}</p>
+    <p>Total Mice: {{ total_mice }}</p>
+    <h2>Strains:</h2>
+    <ul>
+        {% for strain in strains %}
+            <li>{{ strain }}</li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('index') }}">Back to Main Page</a>
+</body>
+</html>

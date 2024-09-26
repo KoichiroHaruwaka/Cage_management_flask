@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Cage Rack Management</title>
+    <style>
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            gap: 5px;
+            padding: 10px;
+        }
+        .grid-item {
+            background-color: #f0f0f0;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            min-height: 50px;
+        }
+        .grid-item.empty {
+            background-color: #fff;
+        }
+        .highlight {
+            border: 2px solid green;
+        }
+    </style>
+</head>
+<body>
+    <h1>Cage Rack Management</h1>
+    <h2>Current Rack: {{ current_rack }}</h2>
+    <div>
+        {% for rack in rack_names %}
+            <a href="{{ url_for('index', rack=rack) }}">{{ rack }}</a>
+            {% if not loop.last %}|{% endif %}
+        {% endfor %}
+    </div>
+    <div>
+        <form method="get" action="{{ url_for('index') }}">
+            <label for="user">Filter by User:</label>
+            <select name="user" id="user" onchange="this.form.submit()">
+                <option value="">All Users</option>
+                {% for user in user_list %}
+                    <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+                {% endfor %}
+            </select>
+            <input type="hidden" name="rack" value="{{ current_rack }}">
+        </form>
+    </div>
+    <div class="grid-container">
+        {% for row in range(9) %}
+            {% for col in range(7) %}
+                {% set key = (row, col) %}
+                {% if key in cages %}
+                    <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                        {{ cages[key]['cage_id'] }}<br>
+                        {{ cages[key]['user'] }}<br>
+                        {{ cages[key]['strain'] }}
+                    </div>
+                {% else %}
+                    <div class="grid-item empty" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                        Empty
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    </div>
+    <div>
+        <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
+        <p>Total Mice in Selected Rack: {{ total_mice }}</p>
+        <p>Total Filled Cages: {{ total_filled_cages }}</p>
+        <p>Total Mice: {{ total_mice_all }}</p>
+    </div>
+    <div>
+        <form action="{{ url_for('summary') }}" method="get">
+            <label for="summary_user">Select User for Summary:</label>
+            <select name="user" id="summary_user">
+                <option value="">Select User</option>
+                {% for user in user_list %}
+                    <option value="{{ user }}">{{ user }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Summary</button>
+        </form>
+    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            <ul>
+            {% for message in messages %}
+                <li>{{ message }}</li>
+            {% endfor %}
+            </ul>
+        {% endif %}
+    {% endwith %}
+</body>
+</html>
