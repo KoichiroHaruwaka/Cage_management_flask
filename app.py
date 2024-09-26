@@ -1,10 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from datetime import datetime
 import os
-import json  # json モジュールのインポートが必要です
+import json
 
 # Google Sheets API 関連のインポート
-from google.oauth2 import service_account
+from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
@@ -17,7 +17,7 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 google_creds = os.environ.get('GOOGLE_CREDENTIALS_JSON')
 if google_creds:
     credentials_info = json.loads(google_creds)
-    credentials = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
+    credentials = Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
 else:
     raise ValueError("Google credentials not found")
 
@@ -25,23 +25,18 @@ else:
 service = build('sheets', 'v4', credentials=credentials)
 sheet = service.spreadsheets()
 
-# スプレッドシートのID（あなたのスプレッドシートのIDに置き換えてください）
+# スプレッドシートのID
 CAGE_DATA_SPREADSHEET_ID = '1nt1MPFZEk1I9stwY8JOvsjJhQHlQAaOE4BH8G0SEgkM'  # cage_data
 MOUSE_STRAINS_SPREADSHEET_ID = '190hLGCInKtdL0Jt50opJMRwb_bpKucf8M4drS7JvnyQ'  # mouse_strains
 
 # ケージ情報を保持する辞書
-# キーは (rack, row, col) のタプル
-cage_dict = {}  # ケージ情報を格納
-
-# 系統リストとユーザーリスト
-strain_list = []
-user_list = []
+cage_dict = {}
 
 # ケージデータをスプレッドシートから読み込む関数
 def load_cage_data():
     result = sheet.values().get(
         spreadsheetId=CAGE_DATA_SPREADSHEET_ID,
-        range='Sheet1!A2:K'  # データの範囲（必要に応じて変更）
+        range='Sheet1!A2:K'  # データの範囲
     ).execute()
     values = result.get('values', [])
     cages = []
@@ -72,7 +67,7 @@ def save_cage_data(cages):
             cage['col'],
             cage['cage_id'],
             cage['strain'],
-            str(cage['count']),  # 数値を文字列に変換
+            cage['count'],
             cage['gender'],
             cage['usage'],
             cage['user'],
@@ -89,11 +84,34 @@ def save_cage_data(cages):
         body=body
     ).execute()
 
+# ケージデータを削除する関数
+def delete_cage_data(rack, row, col):
+    result = sheet.values().get(
+        spreadsheetId=CAGE_DATA_SPREADSHEET_ID,
+        range='Sheet1!A2:K'  # データの範囲
+    ).execute()
+    values = result.get('values', [])
+    updated_values = [v for v in values if not (v[0] == rack and int(v[1]) == row and int(v[2]) == col)]
+    
+    body = {
+        'values': updated_values
+    }
+    sheet.values().clear(
+        spreadsheetId=CAGE_DATA_SPREADSHEET_ID,
+        range='Sheet1!A2:K'
+    ).execute()  # まず全てをクリア
+    sheet.values().update(
+        spreadsheetId=CAGE_DATA_SPREADSHEET_ID,
+        range='Sheet1!A2',
+        valueInputOption='RAW',
+        body=body
+    ).execute()
+
 # 系統リストとユーザーリストをスプレッドシートから読み込む関数
 def load_strains_and_users():
     result = sheet.values().get(
         spreadsheetId=MOUSE_STRAINS_SPREADSHEET_ID,
-        range='Sheet1!A2:B'  # データの範囲（必要に応じて変更）
+        range='Sheet1!A2:B'  # データの範囲
     ).execute()
     values = result.get('values', [])
     strains = []
@@ -172,7 +190,7 @@ def cage_detail(rack, row, col):
         cage['cage_id'] = request.form['cage_id']
         cage['user'] = request.form['user']
         cage['strain'] = request.form['strain']
-        cage['count'] = request.form['count']
+        cage['count'] = int(request.form['count'])
         cage['gender'] = request.form['gender']
         cage['usage'] = request.form['usage']
         cage['dob'] = request.form.get('dob', '')
@@ -182,14 +200,6 @@ def cage_detail(rack, row, col):
         if not cage['cage_id'] or not cage['user'] or not cage['strain'] or not cage['count'] or not cage['gender'] or not cage['usage']:
             flash("Please fill in all required fields.")
             return redirect(request.url)
-        if not str(cage['count']).isdigit():
-            flash("Number of Mice must be a positive integer.")
-            return redirect(request.url)
-        if cage['usage'] == "New born" and not cage['dob']:
-            flash("Please provide DOB for New born mice.")
-            return redirect(request.url)
-
-        cage['count'] = int(cage['count'])  # 型変換
 
         cage_dict[key] = cage
         save_cage_data(list(cage_dict.values()))
@@ -210,6 +220,7 @@ def empty_cage(rack, row, col):
     key = (rack, row, col)
     if key in cage_dict:
         del cage_dict[key]
+        delete_cage_data(rack, row, col)  # スプレッドシートからも削除
         save_cage_data(list(cage_dict.values()))
     return redirect(url_for('index', rack=rack))
 
