@@ -4,10 +4,10 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.secret_key = 'your_secret_key'  # フォームのセキュリティに必要
+app.secret_key = 'wulab'  # フォームのセキュリティに必要
 
 # PostgreSQL データベース URI の設定（Render の PostgreSQL 接続情報に置き換える）
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://<username>:<password>@<host>:<port>/<dbname>'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://cage_management_flask_cage_data_user:BRd8np1IE5fnlllCmLzpl4hRrzLBesmq@dpg-crqonu3tq21c73evqab0-a:5432/cage_management_flask_cage_data'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False  # 変更追跡機能を無効にする（推奨）
 
 # SQLAlchemy の初期化
