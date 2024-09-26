@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from datetime import datetime
 import os
+import json  # json モジュールのインポートが必要です
 
 # Google Sheets API 関連のインポート
-from google.oauth2.service_account import Credentials
+from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 app = Flask(__name__)
@@ -16,15 +17,12 @@ SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 google_creds = os.environ.get('GOOGLE_CREDENTIALS_JSON')
 if google_creds:
     credentials_info = json.loads(google_creds)
-    credentials = service_account.Credentials.from_service_account_info(credentials_info)
+    credentials = service_account.Credentials.from_service_account_info(credentials_info, scopes=SCOPES)
 else:
     raise ValueError("Google credentials not found")
 
-# 認証情報の設定
-creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
-
 # Google Sheets API サービスの初期化
-service = build('sheets', 'v4', credentials=creds)
+service = build('sheets', 'v4', credentials=credentials)
 sheet = service.spreadsheets()
 
 # スプレッドシートのID（あなたのスプレッドシートのIDに置き換えてください）
@@ -74,7 +72,7 @@ def save_cage_data(cages):
             cage['col'],
             cage['cage_id'],
             cage['strain'],
-            cage['count'],
+            str(cage['count']),  # 数値を文字列に変換
             cage['gender'],
             cage['usage'],
             cage['user'],
