@@ -11,7 +11,14 @@ app.secret_key = 'SECRET_KEY'  # フォームのセキュリティに必要
 
 # Google Sheets API のスコープと認証情報
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-SERVICE_ACCOUNT_FILE = 'credentials.json'  # あなたのサービスアカウントのJSONファイル
+
+# Renderの環境変数からcredentials.jsonの内容を取得
+google_creds = os.environ.get('GOOGLE_CREDENTIALS_JSON')
+if google_creds:
+    credentials_info = json.loads(google_creds)
+    credentials = service_account.Credentials.from_service_account_info(credentials_info)
+else:
+    raise ValueError("Google credentials not found")
 
 # 認証情報の設定
 creds = Credentials.from_service_account_file(SERVICE_ACCOUNT_FILE, scopes=SCOPES)
