@@ -50,26 +50,28 @@
     </div>
     <div class="grid-container">
         {% for row in range(9) %}
-            {% for col in range(7) %}
-                {% set cage = None %}
-                {% for item in cages %}
-                    {% if item['row'] == row and item['col'] == col %}
-                        {% set cage = item %}
-                    {% endif %}
-                {% endfor %}
-                {% if cage %}
-                    <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                        {{ cage['cage_id'] }}<br>
-                        {{ cage['user'] }}<br>
-                        {{ cage['strain'] }}
-                    </div>
-                {% else %}
-                    <div class="grid-item empty" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                        Empty
-                    </div>
-                {% endif %}
-            {% endfor %}
+        {% for col in range(7) %}
+        {% set cage = None %}
+        {% for item in cages %}
+            {% if item['row']|int == row and item['col']|int == col %}
+                {% set cage = item %}
+                {% break %}
+            {% endif %}
         {% endfor %}
+        {% if cage %}
+            <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                {{ cage['cage_id'] }}<br>
+                {{ cage['user'] }}<br>
+                {{ cage['strain'] }}
+            </div>
+        {% else %}
+            <div class="grid-item empty" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                Empty
+            </div>
+        {% endif %}
+    {% endfor %}
+{% endfor %}
+
     </div>
     <div>
         <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
