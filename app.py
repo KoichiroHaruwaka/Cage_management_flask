@@ -184,6 +184,11 @@ def cage_detail(rack, row, col):
         'user': user_list[0] if user_list else '',
         'dob': '',
         'note': ''
+    if request.method == 'POST':
+        # データの保存
+        save_cage_data(list(cage_dict.values()))
+        load_data()  # 追加
+        return redirect(url_for('index', rack=rack))
     })
 
     if request.method == 'POST':
@@ -222,7 +227,9 @@ def empty_cage(rack, row, col):
         del cage_dict[key]
         delete_cage_data(rack, row, col)  # スプレッドシートからも削除
         save_cage_data(list(cage_dict.values()))
+            load_data()  # 追加
     return redirect(url_for('index', rack=rack))
+
 
 # ユーザーサマリーの表示
 @app.route('/summary', methods=['GET'])
