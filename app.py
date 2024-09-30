@@ -61,7 +61,6 @@ def load_cage_data():
             continue
     return cages
 
-# ケージデータをスプレッドシートに書き込む関数
 def save_cage_data(cages):
     values = []
     for cage in cages:
@@ -130,7 +129,6 @@ def load_strains_and_users():
 # アプリケーション起動時にデータをロード
 def load_data():
     cages = load_cage_data()
-    cage_dict.clear()  # 既存のデータをクリア
     for cage in cages:
         key = (cage['rack'], cage['row'], cage['col'])
         cage_dict[key] = cage
@@ -212,7 +210,7 @@ def cage_detail(rack, row, col):
 
         cage_dict[key] = cage
         save_cage_data(list(cage_dict.values()))
-        load_data()  # データを再読み込み
+        load_data()  # 追加
 
         return redirect(url_for('index', rack=rack))
 
@@ -232,7 +230,7 @@ def empty_cage(rack, row, col):
         del cage_dict[key]
         delete_cage_data(rack, row, col)  # スプレッドシートからも削除
         save_cage_data(list(cage_dict.values()))
-        load_data()  # データを再読み込み
+        load_data()  # 追加
     return redirect(url_for('index', rack=rack))
 
 # ユーザーサマリーの表示
