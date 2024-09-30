@@ -51,13 +51,7 @@
     <div class="grid-container">
         {% for row in range(9) %}
             {% for col in range(7) %}
-                {% set cage = None %}
-                {% for item in cages %}
-                    {% if item['row']|int == row and item['col']|int == col %}
-                        {% set cage = item %}
-                        {% break %}  <!-- Jinja2 のバージョンによっては削除 -->
-                    {% endif %}
-                {% endfor %}
+                {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
                 {% if cage %}
                     <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
                         {{ cage['cage_id'] }}<br>
