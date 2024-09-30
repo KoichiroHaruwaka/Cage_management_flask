@@ -36,38 +36,41 @@ cage_dict = {}
 def load_cage_data():
     result = sheet.values().get(
         spreadsheetId=CAGE_DATA_SPREADSHEET_ID,
-        range='Sheet1!A2:K'  # データの範囲
+        range='Sheet1!A2:K'
     ).execute()
     values = result.get('values', [])
     cages = []
     for row in values:
-        cage = {
-            'rack': row[0],
-            'row': int(row[1]),
-            'col': int(row[2]),
-            'cage_id': row[3],
-            'strain': row[4],
-            'count': int(row[5]),
-            'gender': row[6],
-            'usage': row[7],
-            'user': row[8],
-            'dob': row[9] if len(row) > 9 else '',
-            'note': row[10] if len(row) > 10 else ''
-        }
-        cages.append(cage)
+        try:
+            cage = {
+                'rack': row[0],
+                'row': int(row[1]),
+                'col': int(row[2]),
+                'cage_id': row[3],
+                'strain': row[4],
+                'count': int(row[5]),
+                'gender': row[6],
+                'usage': row[7],
+                'user': row[8],
+                'dob': row[9] if len(row) > 9 else '',
+                'note': row[10] if len(row) > 10 else ''
+            }
+            cages.append(cage)
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing row: {row} - {e}")
+            continue
     return cages
 
-# ケージデータをスプレッドシートに書き込む関数
 def save_cage_data(cages):
     values = []
     for cage in cages:
         values.append([
-            cage['rack'],
-            cage['row'],
-            cage['col'],
+            str(cage['rack']),
+            str(cage['row']),
+            str(cage['col']),
             cage['cage_id'],
             cage['strain'],
-            cage['count'],
+            str(cage['count']),
             cage['gender'],
             cage['usage'],
             cage['user'],
@@ -129,6 +132,9 @@ def load_data():
     for cage in cages:
         key = (cage['rack'], cage['row'], cage['col'])
         cage_dict[key] = cage
+    print("Loaded cages:")
+    for key, cage in cage_dict.items():
+        print(f"Key: {key}, Cage: {cage}")
     global strain_list, user_list
     strain_list, user_list = load_strains_and_users()
 
