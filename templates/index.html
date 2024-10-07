@@ -10,14 +10,14 @@
     <style>
         /* カード全体の固定サイズを設定 */
         .card {
-            width: 100px;  /* 固定幅 */
-            height: 120px; /* 固定高さ */
+            width: 120px;  /* 固定幅 */
+            height: 90px; /* 固定高さ */
             text-align: center;
             cursor: pointer;
             overflow: hidden; /* 内容があふれた場合に隠す */
         }
         /* カード内のテキストを折り返す */
-        .card .card-body {
+        .card-body {
             padding: 5px;
         }
         .card .card-title {
@@ -33,16 +33,12 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        /* グリッドの調整 */
-        .cage-row {
-            display: flex;
-        }
+        /* グリッドの設定 */
         .cage-grid {
-            display: flex;
-            flex-direction: column;
-        }
-        .flex-fill {
-            flex: none; /* 幅が固定されるように調整 */
+            display: grid;
+            grid-template-columns: repeat(7, 100px); /* 7列、各列の幅100px */
+            grid-template-rows: repeat(9, 120px);    /* 9行、各行の高さ120px */
+            gap: 5px; /* カード間のスペース */
         }
     </style>
 </head>
@@ -72,25 +68,23 @@
         <!-- ケージグリッド -->
         <div class="cage-grid" id="cage-grid">
             {% for row in range(9) %}
-                <div class="cage-row">
-                    {% for col in range(7) %}
-                        {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
-                        {% if cage %}
-                            <div class="card text-white bg-success m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                                <div class="card-body p-2">
-                                    <h5 class="card-title">{{ cage['cage_id'] }}</h5>
-                                    <p class="card-text">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
-                                </div>
+                {% for col in range(7) %}
+                    {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
+                    {% if cage %}
+                        <div class="card text-white bg-success m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                            <div class="card-body p-2">
+                                <h5 class="card-title" title="{{ cage['cage_id'] }}">{{ cage['cage_id'] }}</h5>
+                                <p class="card-text" title="{{ cage['user'] }} {{ cage['strain'] }}">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
                             </div>
-                        {% else %}
-                            <div class="card bg-light m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                                <div class="card-body p-2">
-                                    <p class="card-text">Empty</p>
-                                </div>
+                        </div>
+                    {% else %}
+                        <div class="card bg-light m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                            <div class="card-body p-2">
+                                <p class="card-text">Empty</p>
                             </div>
-                        {% endif %}
-                    {% endfor %}
-                </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
             {% endfor %}
         </div>
         <!-- 統計情報 -->
@@ -135,20 +129,21 @@
     <!-- ドラッグ＆ドロップのスクリプト -->
     <script>
         var el = document.getElementById('cage-grid');
+        var totalCols = 7;  // 列数
+
         var sortable = Sortable.create(el, {
             animation: 150,
             onEnd: function (evt) {
                 var itemEl = evt.item;  // ドラッグされた要素
                 var newIndex = evt.newIndex;  // 新しいインデックス
-    
+
                 // 新しい位置の行と列を計算
-                var totalCols = 7;  // 列数
                 var newRow = Math.floor(newIndex / totalCols);
                 var newCol = newIndex % totalCols;
-    
+
                 var oldRow = itemEl.getAttribute('data-row');
                 var oldCol = itemEl.getAttribute('data-col');
-    
+
                 // サーバーに位置変更を通知
                 fetch('{{ url_for('move_cage') }}', {
                     method: 'POST',
