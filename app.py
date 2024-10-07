@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, jso
 from datetime import datetime
 import os
 import json
+import re  # 正規表現モジュールを追加
 
 # Google Sheets API 関連のインポート
 from google.oauth2.service_account import Credentials
@@ -19,7 +20,7 @@ csrf = CSRFProtect(app)
 # Google Sheets API のスコープと認証情報
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
 
-# Renderの環境変数からcredentials.jsonの内容を取得
+# 環境変数からcredentials.jsonの内容を取得
 google_creds = os.environ.get('GOOGLE_CREDENTIALS_JSON')
 if google_creds:
     credentials_info = json.loads(google_creds)
@@ -135,7 +136,7 @@ def load_strains_and_users():
 # アプリケーション起動時にデータをロード
 def load_data():
     cages = load_cage_data()
-    cage_dict.clear()  # 追加: データを再読み込みする際に辞書をクリア
+    cage_dict.clear()  # データを再読み込みする際に辞書をクリア
     for cage in cages:
         key = (cage['rack'], cage['row'], cage['col'])
         cage_dict[key] = cage
@@ -219,13 +220,17 @@ def cage_detail(rack, row, col):
         if cage['usage'] == 'New born':
             dob = cage['dob']
             if dob:
+                # 正規表現でMM-DD-YYYY形式を検証
+                if not re.match(r'^\d{2}-\d{2}-\d{4}$', dob):
+                    flash("Please enter DOB in MM-DD-YYYY format.")
+                    return redirect(request.url)
                 try:
-                    # dob は MMDDYYYY 形式
-                    dob_datetime = datetime.strptime(dob, '%m%d%Y')
-                    # 必要に応じて別の形式に変換（例: MM-DD-YYYY）
-                    cage['dob'] = dob_datetime.strftime('%m-%d-%Y')
+                    # 日付の妥当性を確認
+                    dob_datetime = datetime.strptime(dob, '%m-%d-%Y')
+                    # 必要に応じて別の形式に変換（例: MMDDYYYY）
+                    cage['dob'] = dob_datetime.strftime('%m%d%Y')
                 except ValueError:
-                    flash("Invalid date format. Please select a valid date.")
+                    flash("Invalid date. Please enter a valid DOB.")
                     return redirect(request.url)
             else:
                 flash("DOB is required for 'New born' usage.")
@@ -235,7 +240,7 @@ def cage_detail(rack, row, col):
 
         cage_dict[key] = cage
         save_cage_data(list(cage_dict.values()))
-        load_data()  # 追加
+        load_data()  # データを再読み込み
 
         return redirect(url_for('index', rack=rack))
 
@@ -255,7 +260,7 @@ def empty_cage(rack, row, col):
         del cage_dict[key]
         delete_cage_data(rack, row, col)  # スプレッドシートからも削除
         save_cage_data(list(cage_dict.values()))
-        load_data()  # 追加
+        load_data()  # データを再読み込み
     return redirect(url_for('index', rack=rack))
 
 # ケージの位置を入れ替えるためのルート
