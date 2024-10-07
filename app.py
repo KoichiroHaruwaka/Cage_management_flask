@@ -215,6 +215,24 @@ def cage_detail(rack, row, col):
             flash("Please fill in all required fields.")
             return redirect(request.url)
 
+        # DOBの処理を更新
+        if cage['usage'] == 'New born':
+            dob = cage['dob']
+            if dob:
+                try:
+                    # dob は MMDDYYYY 形式
+                    dob_datetime = datetime.strptime(dob, '%m%d%Y')
+                    # 必要に応じて別の形式に変換（例: MM-DD-YYYY）
+                    cage['dob'] = dob_datetime.strftime('%m-%d-%Y')
+                except ValueError:
+                    flash("Invalid date format. Please select a valid date.")
+                    return redirect(request.url)
+            else:
+                flash("DOB is required for 'New born' usage.")
+                return redirect(request.url)
+        else:
+            cage['dob'] = ''  # 'New born' 以外の場合は DOB をクリア
+
         cage_dict[key] = cage
         save_cage_data(list(cage_dict.values()))
         load_data()  # 追加
