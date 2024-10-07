@@ -211,7 +211,7 @@ def cage_detail(rack, row, col):
 
         # バリデーション
         if (not cage['cage_id'] or not cage['user'] or not cage['strain'] or
-            not cage['count'] or not cage['gender'] or not cage['usage']):
+            cage['count'] <= 0 or not cage['gender'] or not cage['usage']):
             flash("Please fill in all required fields.")
             return redirect(request.url)
 
@@ -240,29 +240,42 @@ def empty_cage(rack, row, col):
         load_data()  # 追加
     return redirect(url_for('index', rack=rack))
 
-# ケージの位置を変更するためのルート
-@app.route('/move_cage', methods=['POST'])
-def move_cage():
+# ケージの位置を入れ替えるためのルート
+@app.route('/swap_cages', methods=['POST'])
+def swap_cages():
     data = request.get_json()
     rack = data['rack']
-    old_row = int(data['old_row'])
-    old_col = int(data['old_col'])
-    new_row = int(data['new_row'])
-    new_col = int(data['new_col'])
+    source_row = int(data['source_row'])
+    source_col = int(data['source_col'])
+    target_row = int(data['target_row'])
+    target_col = int(data['target_col'])
 
-    old_key = (rack, old_row, old_col)
-    new_key = (rack, new_row, new_col)
+    source_key = (rack, source_row, source_col)
+    target_key = (rack, target_row, target_col)
 
-    if old_key in cage_dict:
-        cage = cage_dict.pop(old_key)
-        cage['row'] = new_row
-        cage['col'] = new_col
-        cage_dict[new_key] = cage
-        save_cage_data(list(cage_dict.values()))
-        load_data()
-        return jsonify({'status': 'success'}), 200
+    # ケージ情報を取得
+    source_cage = cage_dict.get(source_key)
+    target_cage = cage_dict.get(target_key)
+
+    # ケージの位置を入れ替え
+    if source_cage:
+        source_cage['row'] = target_row
+        source_cage['col'] = target_col
+        cage_dict[target_key] = source_cage
     else:
-        return jsonify({'status': 'error', 'message': 'Cage not found'}), 404
+        cage_dict.pop(target_key, None)  # もし存在しない場合は削除
+
+    if target_cage:
+        target_cage['row'] = source_row
+        target_cage['col'] = source_col
+        cage_dict[source_key] = target_cage
+    else:
+        cage_dict.pop(source_key, None)  # もし存在しない場合は削除
+
+    save_cage_data(list(cage_dict.values()))
+    load_data()
+
+    return jsonify({'status': 'success'}), 200
 
 # ユーザーサマリーの表示
 @app.route('/summary', methods=['GET'])
