@@ -47,7 +47,9 @@
 <body>
     <div class="container mt-4">
         <h1 class="mb-4">Cage Detail - Rack {{ rack }}, Row {{ row }}, Column {{ col }}</h1>
-        <form method="post">
+
+        <!-- Save ボタンと Return ボタンを含むフォーム -->
+        <form method="post" action="">
             {{ csrf_token() }}
             <div class="form-group">
                 <label for="cage_id" class="form-label">Cage ID</label>
@@ -96,8 +98,8 @@
             </div>
 
             <div class="form-group" id="dob_field" style="display: none;">
-                <label for="dob" class="form-label">DOB</label>
-                <input type="date" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}">
+                <label for="dob" class="form-label">DOB (MM-DD-YYYY)</label>
+                <input type="text" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}" placeholder="MM-DD-YYYY">
             </div>
 
             <div class="form-group">
@@ -108,11 +110,14 @@
             <div class="button-row">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a href="{{ url_for('index', rack=rack) }}" class="btn btn-secondary">Return</a>
-                <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');">
-                    {{ csrf_token() }}
-                    <button type="submit" class="btn btn-danger">Empty</button>
-                </form>
+                <!-- Empty ボタンのフォームは別にする -->
             </div>
+        </form>
+
+        <!-- Empty ボタンのフォーム（メインフォームの外） -->
+        <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 10px;">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
         </form>
 
         <!-- メッセージの表示 -->
@@ -145,22 +150,6 @@
         }
         // 初期表示
         toggleDOB();
-
-        // フォーム送信前に日付を MMDDYYYY に変換
-        document.querySelector('form').addEventListener('submit', function(e) {
-            var dobInput = document.getElementById('dob');
-            var dobValue = dobInput.value; // YYYY-MM-DD
-            if (dobValue) {
-                var dateParts = dobValue.split('-');
-                if (dateParts.length === 3) {
-                    var year = dateParts[0];
-                    var month = dateParts[1];
-                    var day = dateParts[2];
-                    var reformattedDate = month + day + year;
-                    dobInput.value = reformattedDate;
-                }
-            }
-        });
     </script>
 </body>
 </html>
