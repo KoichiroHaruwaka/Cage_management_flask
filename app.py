@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 from datetime import datetime
 import os
 import json
@@ -7,8 +7,14 @@ import json
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
+# CSRF対策用のインポート
+from flask_wtf.csrf import CSRFProtect
+
 app = Flask(__name__)
 app.secret_key = 'SECRET_KEY'  # フォームのセキュリティに必要
+
+# CSRF対策の初期化
+csrf = CSRFProtect(app)
 
 # Google Sheets API のスコープと認証情報
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
@@ -129,6 +135,7 @@ def load_strains_and_users():
 # アプリケーション起動時にデータをロード
 def load_data():
     cages = load_cage_data()
+    cage_dict.clear()  # 追加: データを再読み込みする際に辞書をクリア
     for cage in cages:
         key = (cage['rack'], cage['row'], cage['col'])
         cage_dict[key] = cage
@@ -232,6 +239,30 @@ def empty_cage(rack, row, col):
         save_cage_data(list(cage_dict.values()))
         load_data()  # 追加
     return redirect(url_for('index', rack=rack))
+
+# ケージの位置を変更するためのルート
+@app.route('/move_cage', methods=['POST'])
+def move_cage():
+    data = request.get_json()
+    rack = data['rack']
+    old_row = int(data['old_row'])
+    old_col = int(data['old_col'])
+    new_row = int(data['new_row'])
+    new_col = int(data['new_col'])
+
+    old_key = (rack, old_row, old_col)
+    new_key = (rack, new_row, new_col)
+
+    if old_key in cage_dict:
+        cage = cage_dict.pop(old_key)
+        cage['row'] = new_row
+        cage['col'] = new_col
+        cage_dict[new_key] = cage
+        save_cage_data(list(cage_dict.values()))
+        load_data()
+        return jsonify({'status': 'success'}), 200
+    else:
+        return jsonify({'status': 'error', 'message': 'Cage not found'}), 404
 
 # ユーザーサマリーの表示
 @app.route('/summary', methods=['GET'])
