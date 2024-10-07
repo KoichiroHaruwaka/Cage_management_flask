@@ -7,14 +7,35 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome CSS（アイコン用、必要に応じて） -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- SortableJS と Swap プラグイン -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/plugins/Swap/Swap.min.js"></script>
     <style>
+        /* グリッドの設定 */
+        .cage-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 5px;
+            margin-bottom: 50px; /* フッターとの間に余白を追加 */
+        }
         /* カード全体の固定サイズを設定 */
         .card {
-            width: 120px;  /* 固定幅 */
-            height: 90px; /* 固定高さ */
+            width: 150px;  /* 固定幅 */
+            height: 90px;  /* 固定高さ */
             text-align: center;
             cursor: pointer;
             overflow: hidden; /* 内容があふれた場合に隠す */
+        }
+        /* レスポンシブ対応 */
+        @media (max-width: 768px) {
+            .card {
+                width: calc(100% / 4 - 10px); /* 4列表示 */
+            }
+        }
+        @media (max-width: 576px) {
+            .card {
+                width: calc(100% / 2 - 10px); /* 2列表示 */
+            }
         }
         /* カード内のテキストを折り返す */
         .card-body {
@@ -33,12 +54,13 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        /* グリッドの設定 */
-        .cage-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 100px); /* 7列、各列の幅100px */
-            grid-template-rows: repeat(9, 120px);    /* 9行、各行の高さ120px */
-            gap: 5px; /* カード間のスペース */
+        /* フッターのスタイル */
+        footer {
+            text-align: center;
+            color: gray;
+            font-size: 0.8rem;
+            margin-top: 30px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -71,14 +93,14 @@
                 {% for col in range(7) %}
                     {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
                     {% if cage %}
-                        <div class="card text-white bg-success m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                        <div class="card text-white bg-success" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
                             <div class="card-body p-2">
                                 <h5 class="card-title" title="{{ cage['cage_id'] }}">{{ cage['cage_id'] }}</h5>
                                 <p class="card-text" title="{{ cage['user'] }} {{ cage['strain'] }}">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
                             </div>
                         </div>
                     {% else %}
-                        <div class="card bg-light m-1" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                        <div class="card bg-light" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
                             <div class="card-body p-2">
                                 <p class="card-text">Empty</p>
                             </div>
@@ -95,7 +117,7 @@
             <p>Total Mice: {{ total_mice_all }}</p>
         </div>
         <!-- ユーザーサマリー -->
-        <div class="mt-4">
+        <div class="mt-4 mb-5">
             <form action="{{ url_for('summary') }}" method="get">
                 <div class="input-group">
                     <label class="input-group-text" for="summary_user">Select User for Summary:</label>
@@ -120,8 +142,10 @@
             {% endif %}
         {% endwith %}
     </div>
-    <!-- SortableJS -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <!-- フッター -->
+    <footer>
+        Designed by Koichiro Haruwaka 2024
+    </footer>
     <!-- CSRFトークンを取得 -->
     <script>
         var csrfToken = '{{ csrf_token() }}';
@@ -133,19 +157,25 @@
 
         var sortable = Sortable.create(el, {
             animation: 150,
+            swap: true, // Swap プラグインを有効化
+            swapClass: 'swap-highlight',
             onEnd: function (evt) {
                 var itemEl = evt.item;  // ドラッグされた要素
-                var newIndex = evt.newIndex;  // 新しいインデックス
+                var targetEl = evt.swapItem;  // 入れ替え対象の要素
 
-                // 新しい位置の行と列を計算
-                var newRow = Math.floor(newIndex / totalCols);
-                var newCol = newIndex % totalCols;
+                if (!targetEl) {
+                    // 入れ替え対象がない場合は何もしない
+                    return;
+                }
 
                 var oldRow = itemEl.getAttribute('data-row');
                 var oldCol = itemEl.getAttribute('data-col');
 
+                var newRow = targetEl.getAttribute('data-row');
+                var newCol = targetEl.getAttribute('data-col');
+
                 // サーバーに位置変更を通知
-                fetch('{{ url_for('move_cage') }}', {
+                fetch('{{ url_for('swap_cages') }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -153,16 +183,16 @@
                     },
                     body: JSON.stringify({
                         'rack': '{{ current_rack }}',
-                        'old_row': oldRow,
-                        'old_col': oldCol,
-                        'new_row': newRow,
-                        'new_col': newCol
+                        'source_row': oldRow,
+                        'source_col': oldCol,
+                        'target_row': newRow,
+                        'target_col': newCol
                     })
                 }).then(response => {
                     if (response.ok) {
                         location.reload();
                     } else {
-                        alert('Failed to move cage.');
+                        alert('Failed to swap cages.');
                     }
                 });
             }
