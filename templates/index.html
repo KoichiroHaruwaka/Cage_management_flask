@@ -2,49 +2,10 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Cage Management</title>
+    <title>Cage Detail</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome CSS（アイコン用、必要に応じて） -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <!-- SortableJS と Swap プラグイン -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/plugins/Swap/Swap.min.js"></script>
     <style>
-        /* グリッドの設定 */
-        .cage-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr); /* 7列固定 */
-            grid-template-rows: repeat(9, auto);   /* 9行固定 */
-            gap: 5px;
-            margin-bottom: 50px; /* フッターとの間に余白を追加 */
-        }
-        /* カードのサイズを可変に */
-        .card {
-            width: 100%;
-            aspect-ratio: 1 / 0.6; /* 幅と高さの比率を維持 */
-            text-align: center;
-            cursor: pointer;
-            overflow: hidden; /* 内容があふれた場合に隠す */
-        }
-        /* カード内のテキストを折り返す */
-        .card-body {
-            padding: 5px;
-        }
-        .card .card-title {
-            font-size: 0.9rem;
-            margin-bottom: 0.5rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis; /* テキストが長い場合に省略記号を表示 */
-        }
-        .card .card-text {
-            font-size: 0.8rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        /* フッターのスタイル */
         footer {
             text-align: center;
             color: gray;
@@ -52,75 +13,112 @@
             margin-top: 30px;
             margin-bottom: 10px;
         }
+        .container {
+            max-width: 800px;
+        }
+        /* フォームのラベルとフィールドを横並びに */
+        .form-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            width: 150px;
+            margin-bottom: 0;
+        }
+        .form-group .form-control,
+        .form-group .form-select {
+            flex: 1;
+        }
+        /* ボタンの配置 */
+        .button-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 20px;
+        }
+        /* ボタンの幅を揃える */
+        .button-row button,
+        .button-row a {
+            width: 30%;
+        }
     </style>
 </head>
 <body>
     <div class="container mt-4">
-        <h1>Cage Rack Management</h1>
-        <h2>Current Rack: {{ current_rack }}</h2>
-        <!-- ラックの選択 -->
-        <div class="mb-3">
-            {% for rack in rack_names %}
-                <a href="{{ url_for('index', rack=rack) }}" class="btn btn-outline-primary btn-sm">{{ rack }}</a>
-            {% endfor %}
-        </div>
-        <!-- ユーザーフィルター -->
-        <form method="get" action="{{ url_for('index') }}" class="mb-3">
-            <div class="input-group">
-                <label class="input-group-text" for="user">Filter by User:</label>
-                <select name="user" id="user" class="form-select" onchange="this.form.submit()">
-                    <option value="">All Users</option>
+        <h1 class="mb-4">Cage Detail - Rack {{ rack }}, Row {{ row }}, Column {{ col }}</h1>
+
+        <!-- Save ボタンと Return ボタンを含むフォーム -->
+        <form method="post" action="">
+            {{ csrf_token() }}
+            <div class="form-group">
+                <label for="cage_id" class="form-label">Cage ID</label>
+                <input type="text" id="cage_id" name="cage_id" class="form-control" value="{{ cage_info['cage_id'] }}">
+            </div>
+
+            <div class="form-group">
+                <label for="user" class="form-label">User</label>
+                <select id="user" name="user" class="form-select">
                     {% for user in user_list %}
-                        <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+                        <option value="{{ user }}" {% if cage_info['user'] == user %}selected{% endif %}>{{ user }}</option>
                     {% endfor %}
                 </select>
-                <input type="hidden" name="rack" value="{{ current_rack }}">
+            </div>
+
+            <div class="form-group">
+                <label for="strain" class="form-label">Mouse Strain</label>
+                <select id="strain" name="strain" class="form-select">
+                    {% for strain in strain_list %}
+                        <option value="{{ strain }}" {% if cage_info['strain'] == strain %}selected{% endif %}>{{ strain }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="count" class="form-label">Number of Mice</label>
+                <input type="number" id="count" name="count" class="form-control" value="{{ cage_info['count'] }}" min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="gender" class="form-label">Gender</label>
+                <select id="gender" name="gender" class="form-select">
+                    <option value="Male" {% if cage_info['gender'] == 'Male' %}selected{% endif %}>Male</option>
+                    <option value="Female" {% if cage_info['gender'] == 'Female' %}selected{% endif %}>Female</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="usage" class="form-label">Usage</label>
+                <select id="usage" name="usage" class="form-select" onchange="toggleDOB()">
+                    <option value="Maintain" {% if cage_info['usage'] == 'Maintain' %}selected{% endif %}>Maintain</option>
+                    <option value="Breeding" {% if cage_info['usage'] == 'Breeding' %}selected{% endif %}>Breeding</option>
+                    <option value="Experiment" {% if cage_info['usage'] == 'Experiment' %}selected{% endif %}>Experiment</option>
+                    <option value="New born" {% if cage_info['usage'] == 'New born' %}selected{% endif %}>New born</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="dob_field" style="display: none;">
+                <label for="dob" class="form-label">DOB (MM-DD-YYYY)</label>
+                <input type="text" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}" placeholder="MM-DD-YYYY">
+            </div>
+
+            <div class="form-group">
+                <label for="note" class="form-label">Note</label>
+                <textarea id="note" name="note" class="form-control" rows="3">{{ cage_info.get('note', '') }}</textarea>
+            </div>
+
+            <div class="button-row">
+                <button type="submit" class="btn btn-primary">Save</button>
+                <a href="{{ url_for('index', rack=rack) }}" class="btn btn-secondary">Return</a>
             </div>
         </form>
-        <!-- ケージグリッド -->
-        <div class="cage-grid" id="cage-grid">
-            {% for row in range(9) %}
-                {% for col in range(7) %}
-                    {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
-                    {% if cage %}
-                        <div class="card text-white bg-success" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                            <div class="card-body p-2">
-                                <h5 class="card-title" title="{{ cage['cage_id'] }}">{{ cage['cage_id'] }}</h5>
-                                <p class="card-text" title="{{ cage['user'] }} {{ cage['strain'] }}">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
-                            </div>
-                        </div>
-                    {% else %}
-                        <div class="card bg-light" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                            <div class="card-body p-2">
-                                <p class="card-text">Empty</p>
-                            </div>
-                        </div>
-                    {% endif %}
-                {% endfor %}
-            {% endfor %}
-        </div>
-        <!-- 統計情報 -->
-        <div class="mt-4">
-            <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
-            <p>Total Mice in Selected Rack: {{ total_mice }}</p>
-            <p>Total Filled Cages: {{ total_filled_cages }}</p>
-            <p>Total Mice: {{ total_mice_all }}</p>
-        </div>
-        <!-- ユーザーサマリー -->
-        <div class="mt-4 mb-5">
-            <form action="{{ url_for('summary') }}" method="get">
-                <div class="input-group">
-                    <label class="input-group-text" for="summary_user">Select User for Summary:</label>
-                    <select name="user" id="summary_user" class="form-select">
-                        <option value="">Select User</option>
-                        {% for user in user_list %}
-                            <option value="{{ user }}">{{ user }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn btn-primary">Summary</button>
-                </div>
-            </form>
-        </div>
+
+        <!-- Empty ボタンのフォームは別に配置 -->
+        <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 20px;">
+            {{ csrf_token() }}
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
+        </form>
+
         <!-- メッセージの表示 -->
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -132,60 +130,25 @@
             {% endif %}
         {% endwith %}
     </div>
+
     <!-- フッター -->
     <footer>
-        Designed for Wu lab @Houston 2024
+        Designed for Wu lab @Houston
     </footer>
-    <!-- CSRFトークンを取得 -->
+
+    <!-- スクリプト -->
     <script>
-        var csrfToken = '{{ csrf_token() }}';
-    </script>
-    <!-- ドラッグ＆ドロップのスクリプト -->
-    <script>
-        var el = document.getElementById('cage-grid');
-
-        var sortable = Sortable.create(el, {
-            animation: 150,
-            swap: true, // Swap プラグインを有効化
-            swapClass: 'swap-highlight',
-            onEnd: function (evt) {
-                var itemEl = evt.item;  // ドラッグされた要素
-                var targetEl = evt.swapItem;  // 入れ替え対象の要素
-
-                if (!targetEl) {
-                    // 入れ替え対象がない場合は何もしない
-                    return;
-                }
-
-                var oldRow = itemEl.getAttribute('data-row');
-                var oldCol = itemEl.getAttribute('data-col');
-
-                var newRow = targetEl.getAttribute('data-row');
-                var newCol = targetEl.getAttribute('data-col');
-
-                // サーバーに位置変更を通知
-                fetch('{{ url_for('swap_cages') }}', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
-                    },
-                    body: JSON.stringify({
-                        'rack': '{{ current_rack }}',
-                        'source_row': oldRow,
-                        'source_col': oldCol,
-                        'target_row': newRow,
-                        'target_col': newCol
-                    })
-                }).then(response => {
-                    if (response.ok) {
-                        location.reload();
-                    } else {
-                        alert('Failed to swap cages.');
-                    }
-                });
+        function toggleDOB() {
+            var usage = document.getElementById('usage').value;
+            var dobField = document.getElementById('dob_field');
+            if (usage === 'New born') {
+                dobField.style.display = 'flex';
+            } else {
+                dobField.style.display = 'none';
             }
-        });
+        }
+        // 初期表示
+        toggleDOB();
     </script>
 </body>
 </html>
