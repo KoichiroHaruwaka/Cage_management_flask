@@ -14,28 +14,18 @@
         /* グリッドの設定 */
         .cage-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(7, 1fr); /* 7列固定 */
+            grid-template-rows: repeat(9, auto);   /* 9行固定 */
             gap: 5px;
             margin-bottom: 50px; /* フッターとの間に余白を追加 */
         }
-        /* カード全体の固定サイズを設定 */
+        /* カードのサイズを可変に */
         .card {
-            width: 150px;  /* 固定幅 */
-            height: 90px;  /* 固定高さ */
+            width: 100%;
+            aspect-ratio: 1 / 0.6; /* 幅と高さの比率を維持 */
             text-align: center;
             cursor: pointer;
             overflow: hidden; /* 内容があふれた場合に隠す */
-        }
-        /* レスポンシブ対応 */
-        @media (max-width: 768px) {
-            .card {
-                width: calc(100% / 4 - 10px); /* 4列表示 */
-            }
-        }
-        @media (max-width: 576px) {
-            .card {
-                width: calc(100% / 2 - 10px); /* 2列表示 */
-            }
         }
         /* カード内のテキストを折り返す */
         .card-body {
@@ -144,7 +134,7 @@
     </div>
     <!-- フッター -->
     <footer>
-        Designed by Koichiro Haruwaka 2024
+        Designed 2024
     </footer>
     <!-- CSRFトークンを取得 -->
     <script>
@@ -153,7 +143,6 @@
     <!-- ドラッグ＆ドロップのスクリプト -->
     <script>
         var el = document.getElementById('cage-grid');
-        var totalCols = 7;  // 列数
 
         var sortable = Sortable.create(el, {
             animation: 150,
