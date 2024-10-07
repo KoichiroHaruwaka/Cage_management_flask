@@ -288,7 +288,13 @@ def summary():
     user_cages = [cage for cage in cage_dict.values() if cage['user'] == user]
     total_cages = len(user_cages)
     total_mice = sum(cage['count'] for cage in user_cages)
-    strains = {cage['strain'] for cage in user_cages}
+    strains = {}
+    for cage in user_cages:
+        strain = cage['strain']
+        if strain not in strains:
+            strains[strain] = {'total_mice': 0, 'cage_count': 0}
+        strains[strain]['total_mice'] += cage['count']
+        strains[strain]['cage_count'] += 1
 
     return render_template('summary.html',
                            user=user,
