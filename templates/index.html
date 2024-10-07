@@ -3,95 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <title>Cage Management</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .grid-container {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: repeat(9, 1fr);
-            gap: 5px;
-            padding: 10px;
-        }
-        .grid-item {
-            background-color: #f0f0f0;
-            padding: 10px;
+        .card {
+            min-width: 100px;
+            min-height: 100px;
             text-align: center;
-            border: 1px solid #ddd;
-            cursor: pointer;
-            min-height: 50px;
         }
-        .grid-item.empty {
-            background-color: #fff;
+        .card .card-title {
+            font-size: 1rem;
+            margin-bottom: 0.5rem;
         }
-        .highlight {
-            border: 2px solid green;
+        .card .card-text {
+            font-size: 0.9rem;
         }
     </style>
 </head>
 <body>
-    <h1>Cage Rack Management</h1>
-    <h2>Current Rack: {{ current_rack }}</h2>
-    <div>
-        {% for rack in rack_names %}
-            <a href="{{ url_for('index', rack=rack) }}">{{ rack }}</a>
-            {% if not loop.last %}|{% endif %}
-        {% endfor %}
-    </div>
-    <div>
-        <form method="get" action="{{ url_for('index') }}">
-            <label for="user">Filter by User:</label>
-            <select name="user" id="user" onchange="this.form.submit()">
-                <option value="">All Users</option>
-                {% for user in user_list %}
-                    <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
-                {% endfor %}
-            </select>
-            <input type="hidden" name="rack" value="{{ current_rack }}">
-        </form>
-    </div>
-    <div class="grid-container">
-        {% for row in range(9) %}
-            {% for col in range(7) %}
-                {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
-                {% if cage %}
-                    <div class="grid-item highlight" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                        {{ cage['cage_id'] }}<br>
-                        {{ cage['user'] }}<br>
-                        {{ cage['strain'] }}
-                    </div>
-                {% else %}
-                    <div class="grid-item empty" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
-                        Empty
-                    </div>
-                {% endif %}
+    <div class="container mt-4">
+        <h1>Cage Rack Management</h1>
+        <h2>Current Rack: {{ current_rack }}</h2>
+        <!-- ラックの選択 -->
+        <div class="mb-3">
+            {% for rack in rack_names %}
+                <a href="{{ url_for('index', rack=rack) }}" class="btn btn-outline-primary btn-sm">{{ rack }}</a>
             {% endfor %}
-        {% endfor %}
-    </div>
-    <div>
-        <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
-        <p>Total Mice in Selected Rack: {{ total_mice }}</p>
-        <p>Total Filled Cages: {{ total_filled_cages }}</p>
-        <p>Total Mice: {{ total_mice_all }}</p>
-    </div>
-    <div>
-        <form action="{{ url_for('summary') }}" method="get">
-            <label for="summary_user">Select User for Summary:</label>
-            <select name="user" id="summary_user">
-                <option value="">Select User</option>
-                {% for user in user_list %}
-                    <option value="{{ user }}">{{ user }}</option>
-                {% endfor %}
-            </select>
-            <button type="submit">Summary</button>
+        </div>
+        <!-- ユーザーフィルター -->
+        <form method="get" action="{{ url_for('index') }}" class="mb-3">
+            <div class="input-group">
+                <label class="input-group-text" for="user">Filter by User:</label>
+                <select name="user" id="user" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Users</option>
+                    {% for user in user_list %}
+                        <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="rack" value="{{ current_rack }}">
+            </div>
         </form>
-    </div>
-    {% with messages = get_flashed_messages() %}
-        {% if messages %}
-            <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
+        <!-- ケージグリッド -->
+        <div class="row">
+            {% for row in range(9) %}
+                <div class="col-12 d-flex">
+                    {% for col in range(7) %}
+                        {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
+                        {% if cage %}
+                            <div class="card text-white bg-success m-1 flex-fill" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                                <div class="card-body p-2">
+                                    <h5 class="card-title">{{ cage['cage_id'] }}</h5>
+                                    <p class="card-text">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="card bg-light m-1 flex-fill" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                                <div class="card-body p-2">
+                                    <p class="card-text">Empty</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
             {% endfor %}
-            </ul>
-        {% endif %}
-    {% endwith %}
+        </div>
+        <!-- 統計情報 -->
+        <div class="mt-4">
+            <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
+            <p>Total Mice in Selected Rack: {{ total_mice }}</p>
+            <p>Total Filled Cages: {{ total_filled_cages }}</p>
+            <p>Total Mice: {{ total_mice_all }}</p>
+        </div>
+        <!-- ユーザーサマリー -->
+        <div class="mt-4">
+            <form action="{{ url_for('summary') }}" method="get">
+                <div class="input-group">
+                    <label class="input-group-text" for="summary_user">Select User for Summary:</label>
+                    <select name="user" id="summary_user" class="form-select">
+                        <option value="">Select User</option>
+                        {% for user in user_list %}
+                            <option value="{{ user }}">{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Summary</button>
+                </div>
+            </form>
+        </div>
+        <!-- メッセージの表示 -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-warning mt-3">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+    </div>
+    <!-- Bootstrap JS（必要な場合のみ） -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script> -->
 </body>
 </html>
