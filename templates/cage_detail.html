@@ -69,7 +69,7 @@
             </div>
 
             <div class="mb-3" id="dob_field" style="display: none;">
-                <label for="dob" class="form-label">DOB (YYYY-MM-DD)</label>
+                <label for="dob" class="form-label">DOB</label>
                 <input type="date" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}">
             </div>
 
@@ -117,7 +117,22 @@
         }
         // 初期表示
         toggleDOB();
+
+        // フォーム送信前に日付を MMDDYYYY に変換
+        document.querySelector('form').addEventListener('submit', function(e) {
+            var dobInput = document.getElementById('dob');
+            var dobValue = dobInput.value; // YYYY-MM-DD
+            if (dobValue) {
+                var dateParts = dobValue.split('-');
+                if (dateParts.length === 3) {
+                    var year = dateParts[0];
+                    var month = dateParts[1];
+                    var day = dateParts[2];
+                    var reformattedDate = month + day + year;
+                    dobInput.value = reformattedDate;
+                }
+            }
+        });
     </script>
 </body>
 </html>
-
