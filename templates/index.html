@@ -136,10 +136,6 @@
     <footer>
         Designed for Wu lab @Houston
     </footer>
-    <!-- CSRFトークンを取得 -->
-    <script>
-        var csrfToken = "{{ csrf_token() }}";
-    </script>
     <!-- ドラッグ＆ドロップのスクリプト -->
     <script>
         var el = document.getElementById('cage-grid');
@@ -168,7 +164,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRFToken': csrfToken
+                        'X-CSRFToken': '{{ csrf_token() }}'
                     },
                     body: JSON.stringify({
                         'rack': '{{ current_rack }}',
