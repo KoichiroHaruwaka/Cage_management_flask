@@ -2,10 +2,49 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Mouse Cage Management</title>
+    <title>Cage Management</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome CSS（アイコン用、必要に応じて） -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- SortableJS と Swap プラグイン -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/plugins/Swap/Swap.min.js"></script>
     <style>
+        /* グリッドの設定 */
+        .cage-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr); /* 7列固定 */
+            grid-template-rows: repeat(9, auto);   /* 9行固定 */
+            gap: 5px;
+            margin-bottom: 50px; /* フッターとの間に余白を追加 */
+        }
+        /* カードのサイズを可変に */
+        .card {
+            width: 100%;
+            aspect-ratio: 1 / 0.6; /* 幅と高さの比率を維持 */
+            text-align: center;
+            cursor: pointer;
+            overflow: hidden; /* 内容があふれた場合に隠す */
+        }
+        /* カード内のテキストを折り返す */
+        .card-body {
+            padding: 5px;
+        }
+        .card .card-title {
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis; /* テキストが長い場合に省略記号を表示 */
+        }
+        .card .card-text {
+            font-size: 0.8rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* フッターのスタイル */
         footer {
             text-align: center;
             color: gray;
@@ -13,93 +52,140 @@
             margin-top: 30px;
             margin-bottom: 10px;
         }
-        .rack {
-            margin-top: 20px;
-        }
-        .rack .row {
-            margin-bottom: 10px;
-        }
-        .cage {
-            width: 60px;
-            height: 60px;
-            border: 1px solid #ccc;
-            text-align: center;
-            vertical-align: middle;
-            line-height: 60px;
-            cursor: pointer;
-            display: inline-block;
-        }
-        .cage.filled {
-            background-color: #f0ad4e;
-        }
-        .cage.empty {
-            background-color: #eee;
-        }
-        .cage.selected {
-            outline: 3px solid #5bc0de;
-        }
-        .cage-label {
-            font-size: 0.8rem;
-        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="mt-4">Mouse Cage Management</h1>
-
-        <!-- ユーザー選択 -->
-        <form method="get" action="" class="mt-3 mb-3">
-            <div class="row">
-                <div class="col-md-3">
-                    <select name="user" class="form-select" onchange="this.form.submit()">
-                        <option value="">All Users</option>
-                        {% for user in user_list %}
-                            <option value="{{ user }}" {% if selected_user == user %}selected{% endif %}>{{ user }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="rack" class="form-select" onchange="this.form.submit()">
-                        {% for rack in rack_names %}
-                            <option value="{{ rack }}" {% if current_rack == rack %}selected{% endif %}>Rack {{ rack }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-        </form>
-
-        <!-- ラック情報の表示 -->
-        <div class="rack">
-            {% for row in range(1, 6) %}
-            <div class="row">
-                {% for col in range(1, 6) %}
-                {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
-                <div class="col">
-                    {% if cage %}
-                    <a href="{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}" class="cage filled">
-                        <div class="cage-label">{{ cage['cage_id'] }}</div>
-                    </a>
-                    {% else %}
-                    <a href="{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}" class="cage empty">
-                        <div class="cage-label">Empty</div>
-                    </a>
-                    {% endif %}
-                </div>
-                {% endfor %}
-            </div>
+    <div class="container mt-4">
+        <h1>Cage Rack Management</h1>
+        <h2>Current Rack: {{ current_rack }}</h2>
+        <!-- ラックの選択 -->
+        <div class="mb-3">
+            {% for rack in rack_names %}
+                <a href="{{ url_for('index', rack=rack) }}" class="btn btn-outline-primary btn-sm">{{ rack }}</a>
             {% endfor %}
         </div>
-
-        <!-- 統計情報の表示 -->
-        <p>Total cages in rack {{ current_rack }}: {{ filled_cages }}</p>
-        <p>Total mice in rack {{ current_rack }}: {{ total_mice }}</p>
-        <p>Total cages overall: {{ total_filled_cages }}</p>
-        <p>Total mice overall: {{ total_mice_all }}</p>
-
-        <!-- フッター -->
-        <footer>
-            Designed for Wu lab @Houston
-        </footer>
+        <!-- ユーザーフィルター -->
+        <form method="get" action="{{ url_for('index') }}" class="mb-3">
+            <div class="input-group">
+                <label class="input-group-text" for="user">Filter by User:</label>
+                <select name="user" id="user" class="form-select" onchange="this.form.submit()">
+                    <option value="">All Users</option>
+                    {% for user in user_list %}
+                        <option value="{{ user }}" {% if user == selected_user %}selected{% endif %}>{{ user }}</option>
+                    {% endfor %}
+                </select>
+                <input type="hidden" name="rack" value="{{ current_rack }}">
+            </div>
+        </form>
+        <!-- ケージグリッド -->
+        <div class="cage-grid" id="cage-grid">
+            {% for row in range(1, 10) %}
+                {% for col in range(1, 8) %}
+                    {% set cage = cage_grid.get((row, col)) %}
+                    {% if cage %}
+                        <div class="card text-white bg-success" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                            <div class="card-body p-2">
+                                <h5 class="card-title" title="{{ cage['cage_id'] }}">{{ cage['cage_id'] }}</h5>
+                                <p class="card-text" title="{{ cage['user'] }} {{ cage['strain'] }}">{{ cage['user'] }}<br>{{ cage['strain'] }}</p>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="card bg-light" data-row="{{ row }}" data-col="{{ col }}" onclick="location.href='{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}'">
+                            <div class="card-body p-2">
+                                <p class="card-text">Empty</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+        <!-- 統計情報 -->
+        <div class="mt-4">
+            <p>Filled Cages in Selected Rack: {{ filled_cages }}</p>
+            <p>Total Mice in Selected Rack: {{ total_mice }}</p>
+            <p>Total Filled Cages: {{ total_filled_cages }}</p>
+            <p>Total Mice: {{ total_mice_all }}</p>
+        </div>
+        <!-- ユーザーサマリー -->
+        <div class="mt-4 mb-5">
+            <form action="{{ url_for('summary') }}" method="get">
+                <div class="input-group">
+                    <label class="input-group-text" for="summary_user">Select User for Summary:</label>
+                    <select name="user" id="summary_user" class="form-select">
+                        <option value="">Select User</option>
+                        {% for user in user_list %}
+                            <option value="{{ user }}">{{ user }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary">Summary</button>
+                </div>
+            </form>
+        </div>
+        <!-- メッセージの表示 -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-warning mt-3">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
     </div>
+    <!-- フッター -->
+    <footer>
+        Designed for Wu lab @Houston
+    </footer>
+    <!-- CSRFトークンを取得 -->
+    <script>
+        var csrfToken = '{{ csrf_token() }}';
+    </script>
+    <!-- ドラッグ＆ドロップのスクリプト -->
+    <script>
+        var el = document.getElementById('cage-grid');
+
+        var sortable = Sortable.create(el, {
+            animation: 150,
+            swap: true, // Swap プラグインを有効化
+            swapClass: 'swap-highlight',
+            onEnd: function (evt) {
+                var itemEl = evt.item;  // ドラッグされた要素
+                var targetEl = evt.swapItem;  // 入れ替え対象の要素
+
+                if (!targetEl) {
+                    // 入れ替え対象がない場合は何もしない
+                    return;
+                }
+
+                var oldRow = itemEl.getAttribute('data-row');
+                var oldCol = itemEl.getAttribute('data-col');
+
+                var newRow = targetEl.getAttribute('data-row');
+                var newCol = targetEl.getAttribute('data-col');
+
+                // サーバーに位置変更を通知
+                fetch('{{ url_for('swap_cages') }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({
+                        'rack': '{{ current_rack }}',
+                        'source_row': oldRow,
+                        'source_col': oldCol,
+                        'target_row': newRow,
+                        'target_col': newCol
+                    })
+                }).then(response => {
+                    if (response.ok) {
+                        location.reload();
+                    } else {
+                        alert('Failed to swap cages.');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
