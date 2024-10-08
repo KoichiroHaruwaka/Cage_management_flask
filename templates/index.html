@@ -73,14 +73,7 @@
             {% for row in range(1, 6) %}
             <div class="row">
                 {% for col in range(1, 6) %}
-                {% set key = (current_rack, row, col) %}
-                {% set cage = None %}
-                {% for c in cages %}
-                    {% if c['rack'] == current_rack and c['row'] == row and c['col'] == col %}
-                        {% set cage = c %}
-                        {% break %}
-                    {% endif %}
-                {% endfor %}
+                {% set cage = cages | selectattr('row', 'equalto', row) | selectattr('col', 'equalto', col) | first %}
                 <div class="col">
                     {% if cage %}
                     <a href="{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}" class="cage filled">
