@@ -171,10 +171,17 @@ def index():
     total_filled_cages = len(cage_dict)
     total_mice_all = sum(cage['count'] for cage in cage_dict.values())
 
+    # ケージを座標で検索しやすいように辞書に変換
+    cage_grid = {}
+    for cage in rack_cages:
+        key = (cage['row'], cage['col'])
+        cage_grid[key] = cage
+
     return render_template('index.html',
                            rack_names=['A', 'B', 'C', 'D'],
                            current_rack=current_rack,
                            cages=rack_cages,
+                           cage_grid=cage_grid,
                            filled_cages=filled_cages,
                            total_mice=total_mice,
                            total_filled_cages=total_filled_cages,
@@ -285,15 +292,12 @@ def swap_cages():
         source_cage['row'] = target_row
         source_cage['col'] = target_col
         cage_dict[target_key] = source_cage
-    else:
-        cage_dict.pop(target_key, None)  # もし存在しない場合は削除
-
+        del cage_dict[source_key]
     if target_cage:
         target_cage['row'] = source_row
         target_cage['col'] = source_col
         cage_dict[source_key] = target_cage
-    else:
-        cage_dict.pop(source_key, None)  # もし存在しない場合は削除
+        del cage_dict[target_key]
 
     save_cage_data(list(cage_dict.values()))
     load_data()
