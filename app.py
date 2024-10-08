@@ -8,11 +8,13 @@ import re  # 正規表現モジュールを追加
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
 
-# CSRF対策用のインポート
-from flask_wtf.csrf import CSRFProtect
+# Flask-WTF と CSRF 対策のインポート
+from flask_wtf import FlaskForm, CSRFProtect
+from wtforms import StringField, IntegerField, SelectField, TextAreaField, SubmitField
+from wtforms.validators import DataRequired
 
 app = Flask(__name__)
-app.secret_key = 'SECRET_KEY'  # フォームのセキュリティに必要
+app.secret_key = 'YOUR_SECRET_KEY'  # セキュリティのために安全なキーを設定してください
 
 # CSRF対策の初期化
 csrf = CSRFProtect(app)
@@ -133,6 +135,18 @@ def load_strains_and_users():
             users.append(row[1])
     return strains, users
 
+# フォームクラスの定義
+class CageForm(FlaskForm):
+    cage_id = StringField('Cage ID', validators=[DataRequired()])
+    user = SelectField('User', validators=[DataRequired()], choices=[])
+    strain = SelectField('Mouse Strain', validators=[DataRequired()], choices=[])
+    count = IntegerField('Number of Mice', validators=[DataRequired()])
+    gender = SelectField('Gender', validators=[DataRequired()], choices=[('Male', 'Male'), ('Female', 'Female')])
+    usage = SelectField('Usage', validators=[DataRequired()], choices=[('Maintain', 'Maintain'), ('Breeding', 'Breeding'), ('Experiment', 'Experiment'), ('New born', 'New born')])
+    dob = StringField('DOB (MM-DD-YYYY)')
+    note = TextAreaField('Note')
+    submit = SubmitField('Save')
+
 # アプリケーション起動時にデータをロード
 def load_data():
     cages = load_cage_data()
@@ -207,21 +221,21 @@ def cage_detail(rack, row, col):
         'note': ''
     })
 
-    if request.method == 'POST':
-        cage['cage_id'] = request.form['cage_id']
-        cage['user'] = request.form['user']
-        cage['strain'] = request.form['strain']
-        cage['count'] = int(request.form['count'])
-        cage['gender'] = request.form['gender']
-        cage['usage'] = request.form['usage']
-        cage['dob'] = request.form.get('dob', '')
-        cage['note'] = request.form.get('note', '')
+    form = CageForm()
 
-        # バリデーション
-        if (not cage['cage_id'] or not cage['user'] or not cage['strain'] or
-            cage['count'] <= 0 or not cage['gender'] or not cage['usage']):
-            flash("Please fill in all required fields.")
-            return redirect(request.url)
+    # ユーザーリストと系統リストをフォームに設定
+    form.user.choices = [(user, user) for user in user_list]
+    form.strain.choices = [(strain, strain) for strain in strain_list]
+
+    if request.method == 'POST' and form.validate():
+        cage['cage_id'] = form.cage_id.data
+        cage['user'] = form.user.data
+        cage['strain'] = form.strain.data
+        cage['count'] = form.count.data
+        cage['gender'] = form.gender.data
+        cage['usage'] = form.usage.data
+        cage['dob'] = form.dob.data
+        cage['note'] = form.note.data
 
         # DOBの処理を更新
         if cage['usage'] == 'New born':
@@ -251,13 +265,22 @@ def cage_detail(rack, row, col):
 
         return redirect(url_for('index', rack=rack))
 
+    else:
+        # フォームに既存のケージ情報を設定
+        form.cage_id.data = cage['cage_id']
+        form.user.data = cage['user']
+        form.strain.data = cage['strain']
+        form.count.data = cage['count']
+        form.gender.data = cage['gender']
+        form.usage.data = cage['usage']
+        form.dob.data = cage.get('dob', '')
+        form.note.data = cage.get('note', '')
+
     return render_template('cage_detail.html',
                            rack=rack,
                            row=row,
                            col=col,
-                           cage_info=cage,
-                           strain_list=strain_list,
-                           user_list=user_list)
+                           form=form)
 
 # ケージを空にするためのルート
 @app.route('/empty_cage/<rack>/<int:row>/<int:col>', methods=['POST'])
@@ -272,6 +295,7 @@ def empty_cage(rack, row, col):
 
 # ケージの位置を入れ替えるためのルート
 @app.route('/swap_cages', methods=['POST'])
+@csrf.exempt  # CSRF トークンを検証しない
 def swap_cages():
     data = request.get_json()
     rack = data['rack']
@@ -282,11 +306,6 @@ def swap_cages():
 
     source_key = (rack, source_row, source_col)
     target_key = (rack, target_row, target_col)
-
-    # CSRF トークンの検証
-    csrf_token = request.headers.get('X-CSRFToken')
-    if not csrf_token or csrf_token != (csrf._get_csrf_token() or request.cookies.get('csrf_token')):
-        return jsonify({'status': 'error', 'message': 'Invalid CSRF token.'}), 400
 
     # ケージ情報を取得
     source_cage = cage_dict.get(source_key)
