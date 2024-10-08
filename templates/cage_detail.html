@@ -110,12 +110,11 @@
             <div class="button-row">
                 <button type="submit" class="btn btn-primary">Save</button>
                 <a href="{{ url_for('index', rack=rack) }}" class="btn btn-secondary">Return</a>
-                <!-- Empty ボタンのフォームは別にする -->
             </div>
         </form>
 
-        <!-- Empty ボタンのフォーム（メインフォームの外） -->
-        <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 10px;">
+        <!-- Empty ボタンのフォームは別に配置 -->
+        <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 20px;">
             {{ csrf_token() }}
             <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
         </form>
