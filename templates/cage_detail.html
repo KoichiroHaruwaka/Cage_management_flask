@@ -50,7 +50,7 @@
 
         <!-- Save ボタンと Return ボタンを含むフォーム -->
         <form method="post" action="">
-            {{ csrf_token() }}
+            {{ csrf_token()|safe }}
             <div class="form-group">
                 <label for="cage_id" class="form-label">Cage ID</label>
                 <input type="text" id="cage_id" name="cage_id" class="form-control" value="{{ cage_info['cage_id'] }}">
@@ -115,8 +115,8 @@
 
         <!-- Empty ボタンのフォームは別に配置 -->
         <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 20px;">
-            {{ csrf_token() }}
-            <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
+            {{ csrf_token()|safe }}
+            <button type="submit" class="btn btn-danger" style="width: 50%;">Empty</button>
         </form>
 
         <!-- メッセージの表示 -->
