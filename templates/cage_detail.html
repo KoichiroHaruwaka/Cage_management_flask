@@ -50,73 +50,57 @@
 
         <!-- Save ボタンと Return ボタンを含むフォーム -->
         <form method="post" action="">
-            {{ csrf_token()|safe }}
+            {{ form.hidden_tag() }}
             <div class="form-group">
-                <label for="cage_id" class="form-label">Cage ID</label>
-                <input type="text" id="cage_id" name="cage_id" class="form-control" value="{{ cage_info['cage_id'] }}">
+                {{ form.cage_id.label }}
+                {{ form.cage_id(class="form-control") }}
             </div>
 
             <div class="form-group">
-                <label for="user" class="form-label">User</label>
-                <select id="user" name="user" class="form-select">
-                    {% for user in user_list %}
-                        <option value="{{ user }}" {% if cage_info['user'] == user %}selected{% endif %}>{{ user }}</option>
-                    {% endfor %}
-                </select>
+                {{ form.user.label }}
+                {{ form.user(class="form-select") }}
             </div>
 
             <div class="form-group">
-                <label for="strain" class="form-label">Mouse Strain</label>
-                <select id="strain" name="strain" class="form-select">
-                    {% for strain in strain_list %}
-                        <option value="{{ strain }}" {% if cage_info['strain'] == strain %}selected{% endif %}>{{ strain }}</option>
-                    {% endfor %}
-                </select>
+                {{ form.strain.label }}
+                {{ form.strain(class="form-select") }}
             </div>
 
             <div class="form-group">
-                <label for="count" class="form-label">Number of Mice</label>
-                <input type="number" id="count" name="count" class="form-control" value="{{ cage_info['count'] }}" min="1">
+                {{ form.count.label }}
+                {{ form.count(class="form-control") }}
             </div>
 
             <div class="form-group">
-                <label for="gender" class="form-label">Gender</label>
-                <select id="gender" name="gender" class="form-select">
-                    <option value="Male" {% if cage_info['gender'] == 'Male' %}selected{% endif %}>Male</option>
-                    <option value="Female" {% if cage_info['gender'] == 'Female' %}selected{% endif %}>Female</option>
-                </select>
+                {{ form.gender.label }}
+                {{ form.gender(class="form-select") }}
             </div>
 
             <div class="form-group">
-                <label for="usage" class="form-label">Usage</label>
-                <select id="usage" name="usage" class="form-select" onchange="toggleDOB()">
-                    <option value="Maintain" {% if cage_info['usage'] == 'Maintain' %}selected{% endif %}>Maintain</option>
-                    <option value="Breeding" {% if cage_info['usage'] == 'Breeding' %}selected{% endif %}>Breeding</option>
-                    <option value="Experiment" {% if cage_info['usage'] == 'Experiment' %}selected{% endif %}>Experiment</option>
-                    <option value="New born" {% if cage_info['usage'] == 'New born' %}selected{% endif %}>New born</option>
-                </select>
+                {{ form.usage.label }}
+                {{ form.usage(class="form-select", onchange="toggleDOB()") }}
             </div>
 
             <div class="form-group" id="dob_field" style="display: none;">
-                <label for="dob" class="form-label">DOB (MM-DD-YYYY)</label>
-                <input type="text" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}" placeholder="MM-DD-YYYY">
+                {{ form.dob.label }}
+                {{ form.dob(class="form-control", placeholder="MM-DD-YYYY") }}
             </div>
 
             <div class="form-group">
-                <label for="note" class="form-label">Note</label>
-                <textarea id="note" name="note" class="form-control" rows="3">{{ cage_info.get('note', '') }}</textarea>
+                {{ form.note.label }}
+                {{ form.note(class="form-control", rows="3") }}
             </div>
 
             <div class="button-row">
-                <button type="submit" class="btn btn-primary">Save</button>
+                {{ form.submit(class="btn btn-primary") }}
                 <a href="{{ url_for('index', rack=rack) }}" class="btn btn-secondary">Return</a>
             </div>
         </form>
 
         <!-- Empty ボタンのフォームは別に配置 -->
         <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 20px;">
-            {{ csrf_token()|safe }}
-            <button type="submit" class="btn btn-danger" style="width: 50%;">Empty</button>
+            {{ form.csrf_token }}
+            <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
         </form>
 
         <!-- メッセージの表示 -->
