@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Cage Detail</title>
+    <title>Mouse Cage Management</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
@@ -13,142 +13,100 @@
             margin-top: 30px;
             margin-bottom: 10px;
         }
-        .container {
-            max-width: 800px;
-        }
-        /* フォームのラベルとフィールドを横並びに */
-        .form-group {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            width: 150px;
-            margin-bottom: 0;
-        }
-        .form-group .form-control,
-        .form-group .form-select {
-            flex: 1;
-        }
-        /* ボタンの配置 */
-        .button-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        .rack {
             margin-top: 20px;
         }
-        /* ボタンの幅を揃える */
-        .button-row button,
-        .button-row a {
-            width: 30%;
+        .rack .row {
+            margin-bottom: 10px;
+        }
+        .cage {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #ccc;
+            text-align: center;
+            vertical-align: middle;
+            line-height: 60px;
+            cursor: pointer;
+            display: inline-block;
+        }
+        .cage.filled {
+            background-color: #f0ad4e;
+        }
+        .cage.empty {
+            background-color: #eee;
+        }
+        .cage.selected {
+            outline: 3px solid #5bc0de;
+        }
+        .cage-label {
+            font-size: 0.8rem;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-4">
-        <h1 class="mb-4">Cage Detail - Rack {{ rack }}, Row {{ row }}, Column {{ col }}</h1>
+    <div class="container">
+        <h1 class="mt-4">Mouse Cage Management</h1>
 
-        <!-- Save ボタンと Return ボタンを含むフォーム -->
-        <form method="post" action="">
-            {{ csrf_token() }}
-            <div class="form-group">
-                <label for="cage_id" class="form-label">Cage ID</label>
-                <input type="text" id="cage_id" name="cage_id" class="form-control" value="{{ cage_info['cage_id'] }}">
-            </div>
-
-            <div class="form-group">
-                <label for="user" class="form-label">User</label>
-                <select id="user" name="user" class="form-select">
-                    {% for user in user_list %}
-                        <option value="{{ user }}" {% if cage_info['user'] == user %}selected{% endif %}>{{ user }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="strain" class="form-label">Mouse Strain</label>
-                <select id="strain" name="strain" class="form-select">
-                    {% for strain in strain_list %}
-                        <option value="{{ strain }}" {% if cage_info['strain'] == strain %}selected{% endif %}>{{ strain }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="count" class="form-label">Number of Mice</label>
-                <input type="number" id="count" name="count" class="form-control" value="{{ cage_info['count'] }}" min="1">
-            </div>
-
-            <div class="form-group">
-                <label for="gender" class="form-label">Gender</label>
-                <select id="gender" name="gender" class="form-select">
-                    <option value="Male" {% if cage_info['gender'] == 'Male' %}selected{% endif %}>Male</option>
-                    <option value="Female" {% if cage_info['gender'] == 'Female' %}selected{% endif %}>Female</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="usage" class="form-label">Usage</label>
-                <select id="usage" name="usage" class="form-select" onchange="toggleDOB()">
-                    <option value="Maintain" {% if cage_info['usage'] == 'Maintain' %}selected{% endif %}>Maintain</option>
-                    <option value="Breeding" {% if cage_info['usage'] == 'Breeding' %}selected{% endif %}>Breeding</option>
-                    <option value="Experiment" {% if cage_info['usage'] == 'Experiment' %}selected{% endif %}>Experiment</option>
-                    <option value="New born" {% if cage_info['usage'] == 'New born' %}selected{% endif %}>New born</option>
-                </select>
-            </div>
-
-            <div class="form-group" id="dob_field" style="display: none;">
-                <label for="dob" class="form-label">DOB (MM-DD-YYYY)</label>
-                <input type="text" id="dob" name="dob" class="form-control" value="{{ cage_info.get('dob', '') }}" placeholder="MM-DD-YYYY">
-            </div>
-
-            <div class="form-group">
-                <label for="note" class="form-label">Note</label>
-                <textarea id="note" name="note" class="form-control" rows="3">{{ cage_info.get('note', '') }}</textarea>
-            </div>
-
-            <div class="button-row">
-                <button type="submit" class="btn btn-primary">Save</button>
-                <a href="{{ url_for('index', rack=rack) }}" class="btn btn-secondary">Return</a>
-            </div>
-        </form>
-
-        <!-- Empty ボタンのフォームは別に配置 -->
-        <form method="post" action="{{ url_for('empty_cage', rack=rack, row=row, col=col) }}" onsubmit="return confirm('Are you sure you want to empty this cage?');" style="margin-top: 20px;">
-            {{ csrf_token() }}
-            <button type="submit" class="btn btn-danger" style="width: 100%;">Empty</button>
-        </form>
-
-        <!-- メッセージの表示 -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-warning mt-3">
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
+        <!-- ユーザー選択 -->
+        <form method="get" action="" class="mt-3 mb-3">
+            <div class="row">
+                <div class="col-md-3">
+                    <select name="user" class="form-select" onchange="this.form.submit()">
+                        <option value="">All Users</option>
+                        {% for user in user_list %}
+                            <option value="{{ user }}" {% if selected_user == user %}selected{% endif %}>{{ user }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
-            {% endif %}
-        {% endwith %}
+                <div class="col-md-3">
+                    <select name="rack" class="form-select" onchange="this.form.submit()">
+                        {% for rack in rack_names %}
+                            <option value="{{ rack }}" {% if current_rack == rack %}selected{% endif %}>Rack {{ rack }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </form>
+
+        <!-- ラック情報の表示 -->
+        <div class="rack">
+            {% for row in range(1, 6) %}
+            <div class="row">
+                {% for col in range(1, 6) %}
+                {% set key = (current_rack, row, col) %}
+                {% set cage = None %}
+                {% for c in cages %}
+                    {% if c['rack'] == current_rack and c['row'] == row and c['col'] == col %}
+                        {% set cage = c %}
+                        {% break %}
+                    {% endif %}
+                {% endfor %}
+                <div class="col">
+                    {% if cage %}
+                    <a href="{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}" class="cage filled">
+                        <div class="cage-label">{{ cage['cage_id'] }}</div>
+                    </a>
+                    {% else %}
+                    <a href="{{ url_for('cage_detail', rack=current_rack, row=row, col=col) }}" class="cage empty">
+                        <div class="cage-label">Empty</div>
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 統計情報の表示 -->
+        <p>Total cages in rack {{ current_rack }}: {{ filled_cages }}</p>
+        <p>Total mice in rack {{ current_rack }}: {{ total_mice }}</p>
+        <p>Total cages overall: {{ total_filled_cages }}</p>
+        <p>Total mice overall: {{ total_mice_all }}</p>
+
+        <!-- フッター -->
+        <footer>
+            Designed for Wu lab @Houston
+        </footer>
     </div>
-
-    <!-- フッター -->
-    <footer>
-        Designed for Wu lab @Houston
-    </footer>
-
-    <!-- スクリプト -->
-    <script>
-        function toggleDOB() {
-            var usage = document.getElementById('usage').value;
-            var dobField = document.getElementById('dob_field');
-            if (usage === 'New born') {
-                dobField.style.display = 'flex';
-            } else {
-                dobField.style.display = 'none';
-            }
-        }
-        // 初期表示
-        toggleDOB();
-    </script>
 </body>
 </html>
