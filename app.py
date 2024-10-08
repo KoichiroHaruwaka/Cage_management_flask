@@ -283,6 +283,11 @@ def swap_cages():
     source_key = (rack, source_row, source_col)
     target_key = (rack, target_row, target_col)
 
+    # CSRF トークンの検証
+    csrf_token = request.headers.get('X-CSRFToken')
+    if not csrf_token or csrf_token != (csrf._get_csrf_token() or request.cookies.get('csrf_token')):
+        return jsonify({'status': 'error', 'message': 'Invalid CSRF token.'}), 400
+
     # ケージ情報を取得
     source_cage = cage_dict.get(source_key)
     target_cage = cage_dict.get(target_key)
