@@ -192,7 +192,7 @@ def index():
         cage_grid[key] = cage
 
     return render_template('index.html',
-                           rack_names=['A', 'B', 'C', 'D'],
+                           rack_names=['A', 'B', 'C', 'D', 'E'],
                            current_rack=current_rack,
                            cages=rack_cages,
                            cage_grid=cage_grid,
